@@ -1,0 +1,335 @@
+package com.stp_japan;
+
+
+
+
+/*
+	class CloudStack
+
+    method String doAPI()
+           String getCommand()             
+           String getApikey()
+           String getSecretkey()
+           void setCommand(String)
+           void setApikey(StriDatatypeConverterng)
+           void setSecretkey(String)
+           
+           created by h.iwasaki - stp-japan
+*/
+
+
+//package com.stp_japan;
+
+import java.net.*;
+import java.util.regex.*;
+import java.util.*;
+import javax.crypto.*;
+import java.lang.*;
+import org.apache.commons.codec.binary.*;
+import javax.xml.bind.DatatypeConverter;
+import javax.crypto.spec.SecretKeySpec;
+import java.io.*;
+import org.w3c.dom.*;
+import org.apache.xerces.parsers.*;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.StringUtils;
+
+//commons-lang-2.6.jarを追加してください
+//http://sourceforge.jp/projects/sfnet_wurfl/downloads/WURFL%20Java%20API/1.4.1/core/wurfl-1.4.1-release/lib/commons-lang-2.6.jar/
+import java.net.URLEncoder;
+
+public class CloudStack {
+	public String strCommand = "";
+	public String strApikey = "";
+	public String strSecretkey = "";
+	public String strSite = "";
+
+	/**import java.util.regex.*;
+
+	 * @param args
+	 */
+	
+	// main routin for Debug
+	public static void main(String[] args) {
+		// TODO 自動生成されたメソッドjavax.xml.bind.DatatypeConverter
+		try {
+			CloudStack cs = new CloudStack();
+			cs.setCommand("command=listUsageRecords&startdate=2012-07-01&enddate=2012-09-01&page=$page&pagesize=500");
+			//cs.setCommand("command=listUsageRecords&startdate=2012-07-01&enddate=2012-09-01&page=0&pagesize=500");
+			//cs.setCommand("listUsageRecords&startdate=2012-07-01&enddate=2012-09-01");
+			cs.setApikey("bHtrN8A6_gJbUu--iaqgEmL_mo0nnD6BGUIr6mbkk73E-gcY3koL7FrsTnTjZMHyXVjbTZ-aXSWBEqVVbP0u1A");
+			cs.setSecretkey("WsLGFp1mxJYg-n96uiaJ-v1KysP6FvRFbIMQehq7sGCIqzAZIV9kUBBZs70Vku23lNNZJIlKPkwA8M3jtSM2dQ");
+			//cs.setSecretkey("nB-OEcZwNcdhGT9Xvsvj_Ww6a9DlQb4kJNyZMUbg51O_3gLQSErg6WdLs0So19x_P3aVP_R4NXuIRjsFBoKMqA");
+			cs.setSite("http://stp-super-cloud.minidns.net:8080/client/api?");
+			cs.doAPI();
+		}
+		catch (Exception e) {
+			System.err.println(e);
+		}
+	}
+	
+	public void setCommand(String strTemp) {
+		strCommand = strTemp;		
+	}
+	public void setApikey(String strTemp) {
+		strApikey = strTemp;
+	}
+	public void setSecretkey(String strTemp) {
+		strSecretkey = strTemp;
+	}
+	public String getCommand() {
+		return strCommand;
+	}
+	public String getApikey() {
+		return strApikey;
+	}
+	public String getSecretkey() {
+		return strSecretkey;
+	}
+	public String getSite() {
+		return strSite;
+	}
+	//DOMParser parser = new DOMParser();
+	public void setSite(String strTemp) {
+		strSite = strTemp;
+	}
+	
+	public String doAPI(){
+		String strXML = "";
+		String strCommandp = "";
+        DOMParser parser = new DOMParser();
+        Document doc;
+        NodeList nl;
+        Integer intCount = 0;
+        Element el;
+       
+		if (getCommand() == "") {
+			return "";
+		}
+		if (getApikey() == "") {
+			return "";
+		}
+		if (getSecretkey() == "") {
+			return "";
+		}
+		if (getSite() == "") {
+			return "";
+		}
+
+		//### issue listDomains API ###
+		HashMap<String, String> hasheddomainname = new HashMap<String, String>();
+		strXML = getXMLpage("command=listDomains");
+		try {
+			parser.parse(strXML);
+		}
+		catch (Exception e) {
+			System.err.println(e);
+		}
+       doc = parser.getDocument();
+       nl = doc.getElementsByTagName("domain");
+       for (intCount = 0; intCount < nl.getLength(); intCount++){
+    	   el = (Element)nl.item(intCount);
+    	   hasheddomainname.put(el.getAttribute("id"), el.getNodeValue());
+    	}
+
+		//### issue listZones API ###
+		//$xml3 = &generateurl("command=listZones", $api_key, $secret_key);
+		//$dom3 = $parser->parse_string($xml3);
+		//@zones = $dom3->findnodes('//zone');
+		//if (scalar(@zones) ne 0) {
+		//	foreach my $zone (@zones) {
+		//		$zonename{$zone->findvalue('id')} = $zone->findvalue('name');
+		//	}
+		//}
+
+		//### issue listServiceOfferings API ###
+		//$xml5 = &generateurl("command=listServiceOfferings", $api_key, $secret_key);
+		//$dom5 = $parser->parse_string($xml5);
+		//@ServiceOfferings = $dom5->findnodes('//serviceoffering');
+		//if (scalar(@ServiceOfferings) ne 0) {
+		//	foreach my $ServiceOffering (@ServiceOfferings) {
+		//		$ServiceOfferingname{$ServiceOffering->findvalue('id')} = $ServiceOffering->findvalue('name');
+		//	}
+		//}	
+
+		
+		
+		// does command content string "page="?
+		Integer intPage = 0;
+		String strCount = "500";
+		List<String> strXMLs = new ArrayList<String>();;
+		if (getCommand().indexOf("page=") == -1) {
+			// get all pages
+			while (strCount == "500") {
+				strCommandp = strCommandp + "&page=" + intPage + "&pagesize=500";
+				strXML = getXMLpage(strCommandp);
+				strXMLs.add(strXML);
+				// parse XML to get count
+				try {
+		           parser.parse(strXML);
+		           doc = parser.getDocument();
+		           nl = doc.getElementsByTagName("count");
+		           strCount = nl.item(0).getNodeValue();
+				}
+				catch (Exception e) {
+					System.err.println(e);
+				}
+				intPage++;
+			}
+		} else {
+			// get selected page
+			strXMLs.add(getXMLpage(strCommandp));
+		}
+
+		
+		
+		
+		return strXML;
+	}
+
+	private String getXMLpage(String strCommandp) {
+		String strXML = "";
+		// step1
+		String strQuery = strCommandp + "&apiKey=" + strApikey;
+		String[] strList = strQuery.split("&");
+		String regex = "(.+)=(.+)";
+		Pattern p = Pattern.compile(regex);
+		Matcher m;
+		String strField = "";
+		String strValue = "";
+		List<String> strTemp = new ArrayList<String>();
+
+		for(String obj : strList) {
+			m = p.matcher(obj);
+			if(m.find()){
+				strField = m.group(1);
+				try {
+					strValue = URLEncoder.encode(m.group(2), "UTF-8");
+				}
+				catch (Exception e) {
+					System.err.println(e);
+				}
+				strTemp.add(strField + "=" + strValue);
+			}
+		}
+		
+		// step2
+//		foreach (@list){
+//			$_ = lc($_);
+//		}
+//		my $output = join("&",sort @list);
+//		ここ
+		
+	
+	ArrayList<String> arryLow = new ArrayList<String>();
+	for(int i = 0; i < strTemp.size();i++){
+		//小文字に変換
+		arryLow.add(strTemp.get(i).toLowerCase());
+	}
+	
+	//並べ替え
+	Collections.sort(arryLow);
+	StringBuilder output = new StringBuilder();
+	try{
+		for(int i = 0;i < arryLow.size();i++){
+			//output = mem[i]+"&"
+			output.append(arryLow.get(i));
+			if(i < arryLow.size()-1){
+				output.append("&");
+			}
+		}
+	}catch(Exception e){
+		System.err.println(e);
+	}
+	String strOutput = new String(output);
+		//List<String> strTemp2 = new ArrayList<String>();
+	
+/*
+		for(String obj : strTemp) {
+			strOutput += "&" + obj.toLowerCase();
+		}
+		strOutput = strOutput.substring(1, strOutput.length());
+*/
+//		strOutput = strTemp.get(1).toLowerCase() + "&" + strTemp.get(0).toLowerCase();
+		
+//		strOutput = "apikey=bi4yqu2nhsctbpq_v68vnltyuwx5-fejnhlojbs5dik4-2syw8oohm3xvoqla0xbijpzumx-h7djsdyj7-awxq&command=listusagerecords&enddate=2012-09-01&page=0&pagesize=500&startdate=2012-07-01";
+		
+		
+		// step3
+		// my $digest = hmac_sha1($output, $secret_key);
+		// my $base64_encoded = encode_base64($digest);
+		// chomp($base64_encoded);
+		// #encode_reserved option is set to 1
+		// my $url_encoded = $uri->encode($base64_encoded, 1); 
+		// my $url = "$site$command&apikey=$api_key&signature=$url_encoded";
+		
+		
+		// HMAC-SHA1による暗号化 
+		//String digest = "";
+		byte[] hash;
+	    try{
+	    	SecretKeySpec sk = new SecretKeySpec(strSecretkey.getBytes(), "HmacSHA1");
+	    	Mac mac = Mac.getInstance("HmacSHA1");
+	    	mac.init(sk);
+	    	hash = mac.doFinal(strOutput.getBytes());
+	    	//イbyte[] hexBytes = new Hex().encode(rawHmac);
+	        //digest = new String(hexBytes);
+	    		    	
+	    	//System.out.println(digest);
+	    }
+	    catch(Exception e){
+	    	throw new RuntimeException(e);
+	    }
+	    
+		// Base64にエンコード
+		//byte[] inStrByte = digest.getBytes();
+	    //byte[] outStrByte = Base64.encodeBase64(inStrByte);
+	    //String base64_encoded = new String(outStrByte);
+	    hash = Base64.encodeBase64(hash);
+	    String base64_encoded = new String(hash);
+	    
+	    	    
+	    // 末尾に改行があれば取り除く
+	    base64_encoded = StringUtils.chopNewline(base64_encoded);
+	    System.out.println("base64_encoded : " + base64_encoded);
+	    /*
+	    Pattern pattern = Pattern.compile("\n");
+	    Matcher matcher = pattern.matcher(base64_encoded);	     
+	    String strResult = matcher.replaceAll("");
+	    System.out.println(strResult);
+	    StringUtils.chomp(base64_encoded); 
+		*/       
+	    
+		// encode reserved option is set to 1
+		String url_encoded = URLEncoder.encode(base64_encoded);
+		System.out.println("url_encoded : " + url_encoded);	
+		String strUrl = strSite + strCommand + "&apikey=" + strApikey + "$signature=" + url_encoded;
+		System.out.println("strUrl : " + strUrl);
+		//step3 end
+		
+		// get data
+		try {
+			URL url = new URL(strUrl);
+			HttpURLConnection urlconn = (HttpURLConnection)url.openConnection();
+			urlconn.setRequestMethod("GET");
+			//urlconn.setInstanceFollowRedirects(true);
+			urlconn.connect();
+			//BufferedInputStream reader = new BufferedInputStream(urlconn.getInputStream());
+			BufferedReader reader = new BufferedReader(new InputStreamReader(urlconn.getInputStream()));
+			
+			String line;
+			while ((line = reader.readLine()) != null){
+					strXML += line;
+			}
+			reader.close();
+			urlconn.disconnect();
+		}
+		catch (Exception e) {
+			System.err.println(e);
+		}
+		return strXML;
+	}
+	
+	
+	
+}
